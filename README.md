@@ -39,10 +39,10 @@ bun run build
 
 ## Releasing
 
-Releases are versioned and published with [Tegami](https://tegami.fuma-nama.dev). Add a pending
-changelog under `.tegami/`; merging it to `main` opens a version PR, and merging that PR publishes
-the package through npm trusted publishing. See [docs/releasing.md](docs/releasing.md) for the
-first-release bootstrap and verification checklist.
+Releases are versioned and published locally with [Tegami](https://tegami.fuma-nama.dev). Add a
+pending changelog under `.tegami/`, run the local version flow, merge the generated release changes,
+then publish from an authenticated checkout of `main`. See [docs/releasing.md](docs/releasing.md)
+for the release and verification checklist.
 
 ## License
 
