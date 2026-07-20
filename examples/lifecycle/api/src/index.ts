@@ -73,8 +73,8 @@ const httpApp = Effect.gen(function* () {
         Effect.as(HttpServerResponse.empty({ status: 204 })),
       );
     case "/stream":
-      yield* Effect.addFinalizer(() => Effect.promise(() => record(env, id, "released")));
       yield* Effect.promise(() => record(env, id, "acquired"));
+      yield* Effect.addFinalizer(() => Effect.promise(() => record(env, id, "released")));
       return HttpServerResponse.stream(
         Stream.fromIterable(["scope", " transferred", "\n"]).pipe(
           Stream.schedule(Schedule.spaced("40 millis")),

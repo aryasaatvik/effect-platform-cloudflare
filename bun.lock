@@ -22,6 +22,20 @@
         "effect-platform-cloudflare": "workspace:*",
       },
     },
+    "examples/lifecycle/api": {
+      "name": "@effect-platform-cloudflare/example-lifecycle-api",
+      "dependencies": {
+        "effect": "4.0.0-beta.98",
+        "effect-platform-cloudflare": "workspace:*",
+      },
+    },
+    "examples/lifecycle/caller": {
+      "name": "@effect-platform-cloudflare/example-lifecycle-caller",
+      "dependencies": {
+        "effect": "4.0.0-beta.98",
+        "effect-platform-cloudflare": "workspace:*",
+      },
+    },
     "packages/effect-platform-cloudflare": {
       "name": "effect-platform-cloudflare",
       "version": "0.0.0",
@@ -55,6 +69,10 @@
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
     "@effect-platform-cloudflare/example-http-api": ["@effect-platform-cloudflare/example-http-api@workspace:examples/http-api"],
+
+    "@effect-platform-cloudflare/example-lifecycle-api": ["@effect-platform-cloudflare/example-lifecycle-api@workspace:examples/lifecycle/api"],
+
+    "@effect-platform-cloudflare/example-lifecycle-caller": ["@effect-platform-cloudflare/example-lifecycle-caller@workspace:examples/lifecycle/caller"],
 
     "@emnapi/core": ["@emnapi/core@1.11.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ=="],
 
