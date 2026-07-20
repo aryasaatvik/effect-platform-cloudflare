@@ -84,27 +84,40 @@ export const makeFetchHandler = <
 >(
   options: FetchHandlerOptions<Provided, LayerError, AppError>,
 ): FetchHandler<Env> => {
-  const isolateScope = Scope.makeUnsafe();
-  const isolateMemoMap = Layer.makeMemoMapUnsafe();
-  let built:
-    | Promise<Context.Context<Exclude<Provided | WorkerEnvironment, Layer.CurrentMemoMap>>>
-    | undefined;
+  type IsolateContext = Context.Context<
+    Exclude<Provided | WorkerEnvironment, Layer.CurrentMemoMap>
+  >;
+  let built: Promise<IsolateContext> | undefined;
 
   const build = (env: Env, context: NativeExecutionContext) => {
-    const promise = (built ??= Effect.runPromise(
-      Layer.buildWithMemoMap(
-        options.layer.pipe(
-          Layer.provideMerge(
-            Layer.succeed(WorkerEnvironment, env as unknown as WorkerEnvironmentValue),
+    if (built === undefined) {
+      const isolateScope = Scope.makeUnsafe();
+      const isolateMemoMap = Layer.makeMemoMapUnsafe();
+      let attempt: Promise<IsolateContext>;
+      attempt = Effect.runPromiseExit(
+        Layer.buildWithMemoMap(
+          options.layer.pipe(
+            Layer.provideMerge(
+              Layer.succeed(WorkerEnvironment, env as unknown as WorkerEnvironmentValue),
+            ),
           ),
-        ),
-        isolateMemoMap,
-        isolateScope,
-      ).pipe(Effect.map(Context.omit(Layer.CurrentMemoMap))),
-    ).catch((error) => {
-      built = undefined;
-      throw error;
-    }));
+          isolateMemoMap,
+          isolateScope,
+        ).pipe(Effect.map(Context.omit(Layer.CurrentMemoMap))),
+      ).then(async (exit) => {
+        if (Exit.isSuccess(exit)) {
+          return exit.value;
+        }
+        await Effect.runPromise(Scope.close(isolateScope, exit));
+        if (built === attempt) {
+          built = undefined;
+        }
+        throw Cause.squash(exit.cause);
+      });
+      built = attempt;
+    }
+
+    const promise = built;
 
     context.waitUntil(
       promise.then(

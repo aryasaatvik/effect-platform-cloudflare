@@ -10,6 +10,9 @@ import {
 } from "../packages/effect-platform-cloudflare/src/index.ts";
 
 class IsolateValue extends Context.Service<IsolateValue, string>()("test/IsolateValue") {}
+class IsolateDependency extends Context.Service<IsolateDependency, string>()(
+  "test/IsolateDependency",
+) {}
 
 interface TypedEnvironment {
   readonly VALUE: string;
@@ -103,6 +106,54 @@ describe("makeFetchHandler", () => {
     expect(failed.status).toBe(500);
     expect(await recovered.text()).toBe("recovered");
     expect(attempts).toBe(2);
+  });
+
+  it("releases partial isolate builds and retries with a fresh memo map", async () => {
+    const counts = { acquires: 0, releases: 0, attempts: 0 };
+    const dependency = Layer.effect(
+      IsolateDependency,
+      Effect.acquireRelease(
+        Effect.sync(() => {
+          counts.acquires += 1;
+          return `dependency-${counts.acquires}`;
+        }),
+        () =>
+          Effect.sync(() => {
+            counts.releases += 1;
+          }),
+      ),
+    );
+    const value = Layer.effect(
+      IsolateValue,
+      Effect.gen(function* () {
+        const acquired = yield* IsolateDependency;
+        counts.attempts += 1;
+        if (counts.attempts === 1) {
+          return yield* Effect.die("cold build failed after acquisition");
+        }
+        return acquired;
+      }),
+    ).pipe(Layer.provideMerge(dependency));
+    const handler = makeFetchHandler({
+      layer: value,
+      httpApp: IsolateValue.pipe(Effect.map(HttpServerResponse.text)),
+    });
+
+    const failed = await handler(
+      new Request("https://example.test/"),
+      {},
+      new TestExecutionContext(),
+    );
+    expect(failed.status).toBe(500);
+    expect(counts).toEqual({ acquires: 1, releases: 1, attempts: 1 });
+
+    const recovered = await handler(
+      new Request("https://example.test/"),
+      {},
+      new TestExecutionContext(),
+    );
+    expect(await recovered.text()).toBe("dependency-2");
+    expect(counts).toEqual({ acquires: 2, releases: 1, attempts: 2 });
   });
 
   it("runs waitUntil effects in an independent scope with never-rejecting native promises", async () => {
