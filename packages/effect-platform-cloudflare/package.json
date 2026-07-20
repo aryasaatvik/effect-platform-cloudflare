@@ -45,6 +45,6 @@
     "effect": "4.0.0-beta.98"
   },
   "peerDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": ">=4.0.0-beta.98"
   }
 }
