@@ -1,0 +1,27 @@
+{
+  "name": "effect-platform-cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Effect HTTP runtime adapter for Cloudflare Workers",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target browser --format esm --external effect && tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "effect": "4.0.0-beta.98"
+  },
+  "peerDependencies": {
+    "effect": "4.0.0-beta.98"
+  }
+}
