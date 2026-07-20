@@ -10,6 +10,9 @@
   "scripts": {
     "build": "bun --filter effect-platform-cloudflare build",
     "check": "bun run format:check && bun run lint && bun run typecheck",
+    "deploy:http-api": "bun run build && bunx wrangler deploy --config examples/http-api/wrangler.jsonc",
+    "deploy:lifecycle-api": "bun run build && bunx wrangler deploy --config examples/lifecycle/api/wrangler.jsonc",
+    "deploy:lifecycle-caller": "bun run build && bunx wrangler deploy --config examples/lifecycle/caller/wrangler.jsonc",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint . --deny-warnings",

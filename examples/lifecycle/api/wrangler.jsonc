@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "effect-platform-cloudflare-lifecycle-api",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-06-19",
+  "compatibility_flags": ["enable_request_signal"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "STATE",
+        "class_name": "LifecycleState",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LifecycleState"],
+    },
+  ],
+}
