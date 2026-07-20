@@ -45,7 +45,7 @@ const httpApp = Effect.gen(function* () {
   const execution = yield* WorkerExecutionContext;
   const isolate = yield* IsolateIdentity;
   const env = bindings as unknown as Env;
-  const url = new URL(request.url);
+  const url = new URL(request.url, "https://worker.invalid");
   const id = url.searchParams.get("id") ?? crypto.randomUUID();
 
   switch (url.pathname) {

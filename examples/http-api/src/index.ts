@@ -14,7 +14,7 @@ const environment = Effect.map(WorkerEnvironment, (bindings) => bindings as unkn
 
 const Routes = Layer.mergeAll(
   HttpRouter.add(
-    "GET",
+    "*",
     "/",
     Effect.gen(function* () {
       const env = yield* environment;
