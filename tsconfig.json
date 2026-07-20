@@ -9,10 +9,13 @@
     "moduleDetection": "force",
     "noEmit": true,
     "noUncheckedIndexedAccess": true,
+    "paths": {
+      "effect-platform-cloudflare": ["./packages/effect-platform-cloudflare/src/index.ts"]
+    },
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2024",
     "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers/types"]
   },
-  "include": ["packages/**/*.ts", "tests/**/*.ts", "*.config.ts"]
+  "include": ["packages/**/*.ts", "examples/**/*.ts", "tests/**/*.ts", "*.config.ts"]
 }

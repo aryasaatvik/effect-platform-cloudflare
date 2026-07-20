@@ -1,0 +1,9 @@
+{
+  "name": "@effect-platform-cloudflare/example-lifecycle-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "effect": "4.0.0-beta.98",
+    "effect-platform-cloudflare": "workspace:*"
+  }
+}
