@@ -1,23 +1,21 @@
-import { Effect, Layer, Stream } from "effect";
+import { Context, Effect, Layer, Stream } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import {
-  makeFetchHandler,
-  WorkerEnvironment,
-  WorkerExecutionContext,
-} from "effect-platform-cloudflare";
+import { HttpWorker, WorkerExecutionContext } from "effect-platform-cloudflare";
 
 interface Env {
   readonly GREETING: string;
 }
 
-const environment = Effect.map(WorkerEnvironment, (bindings) => bindings as unknown as Env);
+class WorkerBindings extends Context.Service<WorkerBindings, Env>()(
+  "example/http-api/WorkerBindings",
+) {}
 
 const Routes = Layer.mergeAll(
   HttpRouter.add(
     "*",
     "/",
     Effect.gen(function* () {
-      const env = yield* environment;
+      const env = yield* WorkerBindings;
       return yield* HttpServerResponse.json({ greeting: env.GREETING, runtime: "cloudflare" });
     }),
   ),
@@ -49,11 +47,8 @@ const Routes = Layer.mergeAll(
   HttpRouter.add("GET", "/failure", Effect.die("intentional example defect")),
 );
 
-const httpApp = HttpRouter.toHttpEffect(Routes).pipe(Effect.flatten);
-
-const fetch = makeFetchHandler<never, never, unknown, Env>({
-  layer: Layer.empty,
-  httpApp,
+const fetch = HttpWorker.toWebHandler(Routes, {
+  environment: WorkerBindings,
 });
 
 export default { fetch } satisfies ExportedHandler<Env>;
