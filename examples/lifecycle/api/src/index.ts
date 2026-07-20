@@ -68,7 +68,10 @@ const httpApp = Effect.gen(function* () {
       return yield* Effect.acquireRelease(
         Effect.promise(() => record(env, id, "acquired")),
         () => Effect.promise(() => record(env, id, "released")),
-      ).pipe(Effect.andThen(Effect.never));
+      ).pipe(
+        Effect.andThen(Effect.sleep("30 seconds")),
+        Effect.as(HttpServerResponse.empty({ status: 204 })),
+      );
     case "/stream":
       yield* Effect.addFinalizer(() => Effect.promise(() => record(env, id, "released")));
       yield* Effect.promise(() => record(env, id, "acquired"));
