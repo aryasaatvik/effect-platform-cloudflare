@@ -270,6 +270,7 @@ const makeWebHandler = <
   return (request, env, nativeContext) => {
     let response: Response | undefined;
     const requestServices = Context.mergeAll(
+      Context.make(options.environment, env),
       Context.make(HttpServerRequest.HttpServerRequest, HttpServerRequest.fromWeb(request)),
       Context.make(WorkerExecutionContext, fromNativeExecutionContext(nativeContext)),
     );
@@ -298,7 +299,11 @@ const makeWebHandler = <
     >;
     const requestEffect = handledWebResponse(requestApp, middleware, (delivered) => {
       response = delivered;
-    }) as Effect.Effect<void, never, WorkerExecutionContext | HttpServerRequest.HttpServerRequest>;
+    }) as Effect.Effect<
+      void,
+      never,
+      Environment | WorkerExecutionContext | HttpServerRequest.HttpServerRequest
+    >;
 
     const done = runRequest(requestEffect, requestServices, request);
     nativeContext.waitUntil(done);

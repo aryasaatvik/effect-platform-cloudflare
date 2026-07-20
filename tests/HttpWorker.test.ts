@@ -100,6 +100,22 @@ describe("HttpWorker.toWebHandler", () => {
     expect(warmContext.promises).toHaveLength(1);
   });
 
+  it("provides the typed environment to application middleware", async () => {
+    const handler = HttpWorker.toWebHandler(route(Effect.succeed(HttpServerResponse.text("ok"))), {
+      environment: TestEnvironment,
+      disableLogger: true,
+      middleware: (httpEffect) => Effect.flatMap(TestEnvironment, () => httpEffect),
+    });
+
+    const response = await handler(
+      new Request("https://example.test/"),
+      { VALUE: "middleware" },
+      new TestExecutionContext(),
+    );
+
+    expect(await response.text()).toBe("ok");
+  });
+
   it("does not cache a failed isolate initialization", async () => {
     let attempts = 0;
     const isolateLayer = Layer.effect(
