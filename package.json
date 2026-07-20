@@ -1,0 +1,31 @@
+{
+  "name": "effect-platform-cloudflare-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "bun --filter effect-platform-cloudflare build",
+    "check": "bun run format:check && bun run lint && bun run typecheck",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint . --deny-warnings",
+    "test": "vitest run --config vitest.config.ts",
+    "test:workers": "vitest run --config vitest.workerd.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.2",
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "effect": "4.0.0-beta.98",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.112.0"
+  },
+  "packageManager": "bun@1.4.0"
+}
