@@ -1,15 +1,15 @@
 import { DurableObject } from "cloudflare:workers";
 import { Context, Effect, Layer, Schedule, Stream } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import {
-  makeFetchHandler,
-  WorkerEnvironment,
-  WorkerExecutionContext,
-} from "effect-platform-cloudflare";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpWorker, WorkerExecutionContext } from "effect-platform-cloudflare";
 
 interface Env {
   readonly STATE: DurableObjectNamespace<LifecycleState>;
 }
+
+class WorkerBindings extends Context.Service<WorkerBindings, Env>()(
+  "example/lifecycle-api/WorkerBindings",
+) {}
 
 interface ProbeState {
   readonly acquired?: boolean;
@@ -31,8 +31,7 @@ class IsolateIdentity extends Context.Service<IsolateIdentity, string>()(
 const IsolateLive = Layer.effect(
   IsolateIdentity,
   Effect.gen(function* () {
-    const bindings = yield* WorkerEnvironment;
-    const env = bindings as unknown as Env;
+    const env = yield* WorkerBindings;
     yield* Effect.promise(() => record(env, "isolate", "acquired"));
     yield* Effect.sleep("75 millis");
     return crypto.randomUUID();
@@ -41,10 +40,9 @@ const IsolateLive = Layer.effect(
 
 const httpApp = Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;
-  const bindings = yield* WorkerEnvironment;
+  const env = yield* WorkerBindings;
   const execution = yield* WorkerExecutionContext;
   const isolate = yield* IsolateIdentity;
-  const env = bindings as unknown as Env;
   const url = new URL(request.url, "https://worker.invalid");
   const id = url.searchParams.get("id") ?? crypto.randomUUID();
 
@@ -87,9 +85,11 @@ const httpApp = Effect.gen(function* () {
   }
 });
 
-const fetch = makeFetchHandler<IsolateIdentity, never, unknown, Env>({
-  layer: IsolateLive,
-  httpApp,
+const Routes = HttpRouter.add("*", "/*", httpApp);
+
+const fetch = HttpWorker.toWebHandler(Routes, {
+  environment: WorkerBindings,
+  isolateLayer: IsolateLive,
 });
 
 export class LifecycleState extends DurableObject<Env> {

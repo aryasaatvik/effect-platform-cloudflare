@@ -1,10 +1,14 @@
-import { Effect, Layer } from "effect";
-import { HttpServerResponse } from "effect/unstable/http";
-import { makeFetchHandler, WorkerEnvironment } from "effect-platform-cloudflare";
+import { Context, Effect } from "effect";
+import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpWorker } from "effect-platform-cloudflare";
 
 interface Env {
   readonly API: Fetcher;
 }
+
+class WorkerBindings extends Context.Service<WorkerBindings, Env>()(
+  "example/lifecycle-caller/WorkerBindings",
+) {}
 
 interface ProbeState {
   readonly acquired?: boolean;
@@ -75,15 +79,15 @@ const verify = async (env: Env) => {
 };
 
 const httpApp = Effect.gen(function* () {
-  const bindings = yield* WorkerEnvironment;
-  const env = bindings as unknown as Env;
+  const env = yield* WorkerBindings;
   const result = yield* Effect.promise(() => verify(env));
   return yield* HttpServerResponse.json(result);
 });
 
-const fetch = makeFetchHandler<never, never, unknown, Env>({
-  layer: Layer.empty,
-  httpApp,
+const Routes = HttpRouter.add("*", "/", httpApp);
+
+const fetch = HttpWorker.toWebHandler(Routes, {
+  environment: WorkerBindings,
 });
 
 export default { fetch } satisfies ExportedHandler<Env>;

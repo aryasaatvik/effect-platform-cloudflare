@@ -1,11 +1,10 @@
 import { Context, Deferred, Effect, Layer, Stream } from "effect";
-import { HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  makeFetchHandler,
+  HttpWorker,
   type NativeExecutionContext,
-  WorkerEnvironment,
   WorkerExecutionContext,
 } from "../packages/effect-platform-cloudflare/src/index.ts";
 
@@ -17,6 +16,13 @@ class IsolateDependency extends Context.Service<IsolateDependency, string>()(
 interface TypedEnvironment {
   readonly VALUE: string;
 }
+
+class TestEnvironment extends Context.Service<TestEnvironment, TypedEnvironment>()(
+  "test/TestEnvironment",
+) {}
+class EmptyEnvironment extends Context.Service<EmptyEnvironment, Record<string, never>>()(
+  "test/EmptyEnvironment",
+) {}
 
 class TestExecutionContext implements NativeExecutionContext {
   readonly promises: Array<Promise<unknown>> = [];
@@ -37,20 +43,22 @@ class TestExecutionContext implements NativeExecutionContext {
   }
 }
 
-describe("makeFetchHandler", () => {
+const route = <E, R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>) =>
+  HttpRouter.add("*", "/*", effect);
+
+describe("HttpWorker.toWebHandler", () => {
   it("builds the isolate layer once and closes non-stream request resources before resolving", async () => {
     const counts = { isolateBuilds: 0, requestAcquires: 0, requestReleases: 0 };
-    const layer = Layer.effect(
+    const isolateLayer = Layer.effect(
       IsolateValue,
       Effect.gen(function* () {
-        const env = yield* WorkerEnvironment;
+        const env = yield* TestEnvironment;
         counts.isolateBuilds += 1;
-        return String(env.VALUE);
+        return env.VALUE;
       }),
     );
-    const handler = makeFetchHandler<IsolateValue, never, never, TypedEnvironment>({
-      layer,
-      httpApp: Effect.acquireRelease(
+    const appLayer = route(
+      Effect.acquireRelease(
         Effect.sync(() => {
           counts.requestAcquires += 1;
         }),
@@ -59,9 +67,14 @@ describe("makeFetchHandler", () => {
             counts.requestReleases += 1;
           }),
       ).pipe(
-        Effect.flatMap(() => IsolateValue),
-        Effect.map((value) => HttpServerResponse.text(value)),
+        Effect.flatMap(() => Effect.all([IsolateValue, TestEnvironment])),
+        Effect.map(([value, env]) => HttpServerResponse.text(`${value}:${env.VALUE}`)),
       ),
+    );
+    const handler = HttpWorker.toWebHandler(appLayer, {
+      environment: TestEnvironment,
+      isolateLayer,
+      disableLogger: true,
     });
 
     const firstContext = new TestExecutionContext();
@@ -71,8 +84,8 @@ describe("makeFetchHandler", () => {
       handler(new Request("https://example.test/"), { VALUE: "ignored" }, secondContext),
     ]);
 
-    expect(await first.text()).toBe("ready");
-    expect(await second.text()).toBe("ready");
+    expect(await first.text()).toBe("ready:ready");
+    expect(await second.text()).toBe("ready:ready");
     expect(counts).toEqual({ isolateBuilds: 1, requestAcquires: 2, requestReleases: 2 });
     expect((await firstContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
     expect((await secondContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
@@ -80,17 +93,21 @@ describe("makeFetchHandler", () => {
 
   it("does not cache a failed isolate initialization", async () => {
     let attempts = 0;
-    const layer = Layer.effect(
+    const isolateLayer = Layer.effect(
       IsolateValue,
       Effect.suspend(() => {
         attempts += 1;
         return attempts === 1 ? Effect.die("cold build failed") : Effect.succeed("recovered");
       }),
     );
-    const handler = makeFetchHandler({
-      layer,
-      httpApp: IsolateValue.pipe(Effect.map(HttpServerResponse.text)),
-    });
+    const handler = HttpWorker.toWebHandler(
+      route(IsolateValue.pipe(Effect.map(HttpServerResponse.text))),
+      {
+        environment: EmptyEnvironment,
+        isolateLayer,
+        disableLogger: true,
+      },
+    );
 
     const failed = await handler(
       new Request("https://example.test/"),
@@ -123,7 +140,7 @@ describe("makeFetchHandler", () => {
           }),
       ),
     );
-    const value = Layer.effect(
+    const isolateLayer = Layer.effect(
       IsolateValue,
       Effect.gen(function* () {
         const acquired = yield* IsolateDependency;
@@ -134,10 +151,14 @@ describe("makeFetchHandler", () => {
         return acquired;
       }),
     ).pipe(Layer.provideMerge(dependency));
-    const handler = makeFetchHandler({
-      layer: value,
-      httpApp: IsolateValue.pipe(Effect.map(HttpServerResponse.text)),
-    });
+    const handler = HttpWorker.toWebHandler(
+      route(IsolateValue.pipe(Effect.map(HttpServerResponse.text))),
+      {
+        environment: EmptyEnvironment,
+        isolateLayer,
+        disableLogger: true,
+      },
+    );
 
     const failed = await handler(
       new Request("https://example.test/"),
@@ -158,9 +179,8 @@ describe("makeFetchHandler", () => {
 
   it("runs waitUntil effects in an independent scope with never-rejecting native promises", async () => {
     let completed = 0;
-    const handler = makeFetchHandler({
-      layer: Layer.empty,
-      httpApp: Effect.gen(function* () {
+    const appLayer = route(
+      Effect.gen(function* () {
         const execution = yield* WorkerExecutionContext;
         yield* execution.waitUntil(
           Effect.sync(() => {
@@ -169,6 +189,10 @@ describe("makeFetchHandler", () => {
         );
         return HttpServerResponse.empty({ status: 202 });
       }),
+    );
+    const handler = HttpWorker.toWebHandler(appLayer, {
+      environment: EmptyEnvironment,
+      disableLogger: true,
     });
     const context = new TestExecutionContext();
 
@@ -183,9 +207,8 @@ describe("makeFetchHandler", () => {
   it("transfers request scope ownership to a streaming response", async () => {
     let finalized = false;
     const gate: Deferred.Deferred<void, never> = Effect.runSync(Deferred.make<void>());
-    const handler = makeFetchHandler({
-      layer: Layer.empty,
-      httpApp: Effect.gen(function* () {
+    const appLayer = route(
+      Effect.gen(function* () {
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
             finalized = true;
@@ -198,6 +221,10 @@ describe("makeFetchHandler", () => {
           ),
         );
       }),
+    );
+    const handler = HttpWorker.toWebHandler(appLayer, {
+      environment: EmptyEnvironment,
+      disableLogger: true,
     });
 
     const response = await handler(
@@ -213,10 +240,13 @@ describe("makeFetchHandler", () => {
   });
 
   it("renders HEAD without a body", async () => {
-    const handler = makeFetchHandler({
-      layer: Layer.empty,
-      httpApp: Effect.succeed(HttpServerResponse.text("not sent")),
-    });
+    const handler = HttpWorker.toWebHandler(
+      route(Effect.succeed(HttpServerResponse.text("not sent"))),
+      {
+        environment: EmptyEnvironment,
+        disableLogger: true,
+      },
+    );
 
     const response = await handler(
       new Request("https://example.test/", { method: "HEAD" }),
@@ -230,13 +260,16 @@ describe("makeFetchHandler", () => {
 
   it("interrupts the request as ClientAbort and completes finalizers", async () => {
     let finalized = false;
-    const handler = makeFetchHandler({
-      layer: Layer.empty,
-      httpApp: Effect.acquireRelease(Effect.void, () =>
+    const appLayer = route(
+      Effect.acquireRelease(Effect.void, () =>
         Effect.sync(() => {
           finalized = true;
         }),
       ).pipe(Effect.andThen(Effect.never)),
+    );
+    const handler = HttpWorker.toWebHandler(appLayer, {
+      environment: EmptyEnvironment,
+      disableLogger: true,
     });
     const controller = new AbortController();
     const context = new TestExecutionContext();

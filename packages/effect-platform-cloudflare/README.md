@@ -1,44 +1,71 @@
 # effect-platform-cloudflare
 
-Build Cloudflare Worker HTTP handlers from Effect applications without coupling the application to
-a deployment framework.
+Run an Effect HTTP router as a Cloudflare Worker without coupling the application to a deployment
+framework.
 
 ```ts
-import { Effect, Layer } from "effect";
-import { HttpServerResponse } from "effect/unstable/http";
-import { makeFetchHandler, WorkerEnvironment } from "effect-platform-cloudflare";
+import { Context, Effect } from "effect";
+import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpWorker } from "effect-platform-cloudflare";
 
 interface Env {
   readonly API_ORIGIN: string;
 }
 
-const httpApp = Effect.gen(function* () {
-  const environment = yield* WorkerEnvironment;
-  const env = environment as unknown as Env;
-  return HttpServerResponse.text(`upstream: ${env.API_ORIGIN}`);
+class WorkerBindings extends Context.Service<WorkerBindings, Env>()("app/WorkerBindings") {}
+
+const AppLayer = HttpRouter.add(
+  "GET",
+  "/",
+  Effect.gen(function* () {
+    const env = yield* WorkerBindings;
+    return HttpServerResponse.text(`upstream: ${env.API_ORIGIN}`);
+  }),
+);
+
+const fetch = HttpWorker.toWebHandler(AppLayer, {
+  environment: WorkerBindings,
 });
 
-const fetch = makeFetchHandler<never, never, never, Env>({
-  layer: Layer.empty,
-  httpApp,
-});
-
-export default { fetch };
+export default { fetch } satisfies ExportedHandler<Env>;
 ```
 
-`WorkerEnvironment` deliberately stores the raw binding record without claiming a package-level
-environment type. Applications validate or narrow it at their boundary.
+`HttpWorker.toWebHandler` is the Cloudflare equivalent of Effect's
+`HttpRouter.toWebHandler`. It takes the router application layer directly, adds the router runtime,
+renders failures, logs requests by default, and returns a standard Worker fetch handler.
 
-## Worker lifecycle
+The application owns the environment service key. The handler infers its `Env` parameter from that
+key and provides the exact bindings through the Effect context without a cast. Both
+`Context.Service` and `Context.Reference` keys are supported.
 
-`makeFetchHandler` builds the supplied layer at isolate scope and caches successful initialization.
-A failed initialization is not cached. Each event creates a fresh request scope, and the full
-request Exit is registered with Cloudflare's native `ExecutionContext.waitUntil`.
+## Layer lifetimes
 
-Normal responses close request resources before the handler promise resolves. Streaming responses
-transfer scope ownership to the response body so resources remain live until the stream closes or
-fails. Request abort signals interrupt the Effect application with
-`HttpServerError.ClientAbort.annotation`, allowing Effect's HTTP machinery to render status 499.
+The application layer is built in a fresh scope for every request. Put request-owned resources such
+as database connections in that graph so they cannot cross workerd event contexts.
+
+Use `isolateLayer` only for services that are safe to share across every request handled by the
+same Worker isolate:
+
+```ts
+const fetch = HttpWorker.toWebHandler(AppLayer, {
+  environment: WorkerBindings,
+  isolateLayer: HostServicesLayer,
+});
+```
+
+Successful isolate initialization is cached. A failed build is closed and retried on the next
+request. The isolate context deliberately omits Effect's `CurrentMemoMap`, so request-time layer
+builds receive a fresh memo map.
+
+## HTTP behavior
+
+The handler uses Effect's HTTP server machinery for failure rendering, tracing, response logging,
+HEAD requests, and streaming scope transfer. Set `disableLogger: true` to disable the default
+response logger, or pass `middleware` using the same shape accepted by Effect's router Web handler.
+
+Every request is interrupted with `HttpServerError.ClientAbort.annotation` when its Web Request
+signal aborts. Its full Effect `Exit` is registered with Cloudflare's native
+`ExecutionContext.waitUntil`, allowing finalizers to finish even when the caller disconnects.
 
 ## Background work
 
