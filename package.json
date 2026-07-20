@@ -17,6 +17,8 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint . --deny-warnings",
+    "release:check": "bun run check && bun run test && bun run test:workers && bun run build && bun run --cwd packages/effect-platform-cloudflare package:smoke",
+    "tegami": "bun scripts/tegami.mts",
     "test": "vitest run --config vitest.config.ts",
     "test:workers": "vitest run --config vitest.workerd.config.ts",
     "typecheck": "tsc --noEmit"
@@ -27,6 +29,7 @@
     "effect": "4.0.0-beta.98",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
+    "tegami": "1.2.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10",
     "wrangler": "^4.112.0"

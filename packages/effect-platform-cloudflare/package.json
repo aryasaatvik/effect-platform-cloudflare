@@ -1,11 +1,28 @@
 {
   "name": "effect-platform-cloudflare",
   "version": "0.0.0",
-  "private": true,
   "description": "Effect HTTP router runtime for Cloudflare Workers",
+  "keywords": [
+    "cloudflare-workers",
+    "effect",
+    "http",
+    "typescript"
+  ],
+  "homepage": "https://github.com/aryasaatvik/effect-platform-cloudflare#readme",
+  "bugs": "https://github.com/aryasaatvik/effect-platform-cloudflare/issues",
+  "license": "MIT",
+  "author": "Saatvik Arya",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aryasaatvik/effect-platform-cloudflare.git",
+    "directory": "packages/effect-platform-cloudflare"
+  },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
   ],
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -13,10 +30,16 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target browser --format esm --external effect && tsc -p tsconfig.build.json"
+    "build": "bun build src/index.ts --outdir dist --target browser --format esm --external effect && tsc -p tsconfig.build.json",
+    "package:smoke": "bun pm pack --dry-run",
+    "prepack": "bun run build"
   },
   "devDependencies": {
     "effect": "4.0.0-beta.98"

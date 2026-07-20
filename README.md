@@ -1,6 +1,11 @@
 # effect-platform-cloudflare
 
-An Effect HTTP runtime adapter for Cloudflare Workers.
+Run an Effect HTTP router as a Cloudflare Worker without coupling the application to a deployment
+framework.
+
+```sh
+bun add effect-platform-cloudflare effect@4.0.0-beta.98
+```
 
 This repository is intentionally deployment-framework independent. The package turns an Effect
 HTTP application into a standard module Worker `fetch` handler while preserving the Worker runtime
@@ -13,13 +18,14 @@ lifecycle:
 - streaming responses own their request scope until the body closes
 - background Effects receive their own scope through `WorkerExecutionContext`
 
-The package is private while the core runtime, deployable examples, and Samva integration are being
-validated. Publishing, public repository visibility, and CI are deliberately deferred.
+See the [package README](packages/effect-platform-cloudflare/README.md) for usage and lifecycle
+guidance.
 
 ## Workspace
 
 - `packages/effect-platform-cloudflare` — reusable runtime package
-- `tests` — lifecycle tests plus a real workerd smoke test
+- `examples` — deployable HTTP and lifecycle probes
+- `tests` — lifecycle tests plus real workerd coverage
 
 ## Development
 
@@ -30,3 +36,14 @@ bun run test
 bun run test:workers
 bun run build
 ```
+
+## Releasing
+
+Releases are versioned and published with [Tegami](https://tegami.fuma-nama.dev). Add a pending
+changelog under `.tegami/`; merging it to `main` opens a version PR, and merging that PR publishes
+the package through npm trusted publishing. See [docs/releasing.md](docs/releasing.md) for the
+first-release bootstrap and verification checklist.
+
+## License
+
+MIT
