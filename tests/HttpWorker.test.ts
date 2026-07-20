@@ -89,6 +89,15 @@ describe("HttpWorker.toWebHandler", () => {
     expect(counts).toEqual({ isolateBuilds: 1, requestAcquires: 2, requestReleases: 2 });
     expect((await firstContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
     expect((await secondContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
+
+    const warmContext = new TestExecutionContext();
+    const warm = await handler(
+      new Request("https://example.test/"),
+      { VALUE: "ignored" },
+      warmContext,
+    );
+    expect(await warm.text()).toBe("ready:ready");
+    expect(warmContext.promises).toHaveLength(1);
   });
 
   it("does not cache a failed isolate initialization", async () => {

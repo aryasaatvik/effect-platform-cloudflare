@@ -34,6 +34,12 @@ type RouteRequirements<R> =
   | HttpRouter.Request.Only<"Requires", R>
   | HttpRouter.Request.Only<"GlobalRequires", R>;
 
+type MiddlewareEffect<E, R> = Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  ApplicationErrors<E, R>,
+  RouteRequirements<R>
+>;
+
 type RuntimeServices<Environment, IsolateProvided> =
   | Environment
   | IsolateProvided
@@ -69,8 +75,7 @@ export interface ToWebHandlerOptions<
   IsolateError,
   E,
   R,
-  HE,
-  HR,
+  M extends Effect.Effect<HttpServerResponse.HttpServerResponse, any, any>,
 > {
   /** Application-owned service key used to provide the Cloudflare bindings. */
   readonly environment: Context.Key<Environment, Env>;
@@ -78,15 +83,64 @@ export interface ToWebHandlerOptions<
   readonly isolateLayer?: Layer.Layer<IsolateProvided, IsolateError, Environment> | undefined;
   readonly disableLogger?: boolean | undefined;
   readonly routerConfig?: Partial<FindMyWay.RouterConfig> | undefined;
-  readonly middleware?:
-    | ((
-        effect: Effect.Effect<
-          HttpServerResponse.HttpServerResponse,
-          ApplicationErrors<E, R>,
-          RouteRequirements<R>
+  readonly middleware?: ((effect: MiddlewareEffect<E, R>) => M) | undefined;
+}
+
+type WithoutMiddleware<Env extends object, Environment, IsolateProvided, IsolateError, E, R> = Omit<
+  ToWebHandlerOptions<
+    Env,
+    Environment,
+    IsolateProvided,
+    IsolateError,
+    E,
+    R,
+    MiddlewareEffect<E, R>
+  >,
+  "middleware"
+> & {
+  readonly middleware?: undefined;
+};
+
+type MiddlewareOutput<O> = O extends {
+  readonly middleware: (...args: never[]) => infer M;
+}
+  ? M extends Effect.Effect<HttpServerResponse.HttpServerResponse, any, any>
+    ? M
+    : never
+  : never;
+
+interface ToWebHandler {
+  <A, E, R, O, Env extends object, Environment, IsolateProvided = never, IsolateError = never>(
+    appLayer: Layer.Layer<A, E, R>,
+    options: O &
+      Omit<
+        ToWebHandlerOptions<
+          Env,
+          Environment,
+          IsolateProvided,
+          IsolateError,
+          E,
+          R,
+          Effect.Effect<HttpServerResponse.HttpServerResponse, any, any>
         >,
-      ) => Effect.Effect<HttpServerResponse.HttpServerResponse, HE, HR>)
-    | undefined;
+        "middleware"
+      > & {
+        readonly middleware: (
+          effect: MiddlewareEffect<E, R>,
+        ) => Effect.Effect<HttpServerResponse.HttpServerResponse, any, any>;
+      } & FullyProvided<
+        A,
+        R,
+        Effect.Services<MiddlewareOutput<NoInfer<O>>>,
+        Environment,
+        IsolateProvided
+      >,
+  ): Handler<Env>;
+  <A, E, R, Env extends object, Environment, IsolateProvided = never, IsolateError = never>(
+    appLayer: Layer.Layer<A, E, R>,
+    options: WithoutMiddleware<Env, Environment, IsolateProvided, IsolateError, E, R> &
+      FullyProvided<A, R, RouteRequirements<R>, Environment, IsolateProvided>,
+  ): Handler<Env>;
 }
 
 const handledWebResponse = <E, R>(
@@ -141,7 +195,7 @@ const runRequest = <A, E, R>(
  * contexts. Responses, aborts, logging, and streaming follow Effect's HTTP
  * server semantics.
  */
-export const toWebHandler = <
+const makeWebHandler = <
   A,
   E,
   R,
@@ -149,17 +203,23 @@ export const toWebHandler = <
   Environment,
   IsolateProvided = never,
   IsolateError = never,
-  HE = ApplicationErrors<E, R>,
-  HR = HttpRouter.Request.Only<"Requires", R> | HttpRouter.Request.Only<"GlobalRequires", R>,
 >(
   appLayer: Layer.Layer<A, E, R>,
-  options: ToWebHandlerOptions<Env, Environment, IsolateProvided, IsolateError, E, R, HE, HR> &
-    FullyProvided<A, R, HR, Environment, IsolateProvided>,
+  options: ToWebHandlerOptions<
+    Env,
+    Environment,
+    IsolateProvided,
+    IsolateError,
+    E,
+    R,
+    Effect.Effect<HttpServerResponse.HttpServerResponse, any, any>
+  >,
 ): Handler<Env> => {
   type IsolateContext = Context.Context<
     Exclude<IsolateProvided | Environment, Layer.CurrentMemoMap>
   >;
   let built: Promise<IsolateContext> | undefined;
+  let isolateReady = false;
 
   const buildIsolate = (env: Env, context: NativeExecutionContext) => {
     if (built === undefined) {
@@ -175,6 +235,7 @@ export const toWebHandler = <
         ),
       ).then(async (exit) => {
         if (Exit.isSuccess(exit)) {
+          isolateReady = true;
           return exit.value;
         }
         await Effect.runPromise(Scope.close(isolateScope, exit));
@@ -187,17 +248,22 @@ export const toWebHandler = <
     }
 
     const promise = built;
-    context.waitUntil(
-      promise.then(
-        () => undefined,
-        () => undefined,
-      ),
-    );
+    if (!isolateReady) {
+      context.waitUntil(
+        promise.then(
+          () => undefined,
+          () => undefined,
+        ),
+      );
+    }
     return promise;
   };
 
+  // The public overloads validate the middleware's concrete output before
+  // this runtime bridge to Effect's intentionally erased HttpMiddleware type.
   let middleware = options.middleware as HttpMiddleware.HttpMiddleware | undefined;
   if (options.disableLogger !== true) {
+    // `compose` is left-to-right: the logger wraps the user middleware.
     middleware = middleware ? compose(middleware, HttpMiddleware.logger) : HttpMiddleware.logger;
   }
 
@@ -247,3 +313,5 @@ export const toWebHandler = <
     });
   };
 };
+
+export const toWebHandler: ToWebHandler = makeWebHandler as ToWebHandler;

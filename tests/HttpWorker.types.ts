@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { HttpWorker } from "../packages/effect-platform-cloudflare/src/index.ts";
 
@@ -45,4 +45,20 @@ const fallibleRoutes = HttpRouter.add(
 
 HttpWorker.toWebHandler(fallibleRoutes, {
   environment: TestEnvironment,
+});
+
+HttpWorker.toWebHandler(fullyProvidedRoutes, {
+  environment: TestEnvironment,
+  middleware: (httpEffect) => Effect.flatMap(HttpServerRequest.HttpServerRequest, () => httpEffect),
+});
+
+HttpWorker.toWebHandler(routeRequiringService, {
+  environment: TestEnvironment,
+  middleware: (httpEffect) => Effect.provideService(httpEffect, RouteService, "provided"),
+});
+
+// @ts-expect-error Custom middleware must eliminate every non-runtime service requirement.
+HttpWorker.toWebHandler(routeRequiringService, {
+  environment: TestEnvironment,
+  middleware: (httpEffect) => httpEffect,
 });
