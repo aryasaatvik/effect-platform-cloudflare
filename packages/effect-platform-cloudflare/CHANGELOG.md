@@ -1,9 +1,6 @@
----
-packages:
-  "npm:effect-platform-cloudflare": minor
----
+## effect-platform-cloudflare@0.1.0
 
-## Initial release
+### Initial release
 
 - Run Effect HTTP router layers as standard Cloudflare Worker fetch handlers.
 - Separate isolate-safe services from request-scoped application resources.

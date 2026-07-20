@@ -1,0 +1,14 @@
+core:changelogs:
+  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: minor\n---\n\n## Initial release\n\n- Run Effect HTTP router layers as standard Cloudflare Worker fetch handlers.\n- Separate isolate-safe services from request-scoped application resources.\n- Preserve Effect HTTP failure rendering, request logging, HEAD responses, and streaming scopes.\n- Map request aborts to `ClientAbort` and pin complete request fibers with `waitUntil`.\n- Provide typed Worker bindings and a restricted `WorkerExecutionContext` service.\n"
+    filename: 2026-07-20-initial-release.md
+    v: 0.0.0
+core:packages:
+  - changelogIds:
+      - 2026-07-20-initial-release.md
+    id: npm:effect-platform-cloudflare
+    updated: true
+npm:packages:
+  - id: npm:effect-platform-cloudflare
+  - id: npm:@effect-platform-cloudflare/example-http-api
+  - id: npm:@effect-platform-cloudflare/example-lifecycle-caller
+  - id: npm:@effect-platform-cloudflare/example-lifecycle-api
