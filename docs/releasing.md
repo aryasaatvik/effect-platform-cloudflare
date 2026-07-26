@@ -6,11 +6,11 @@ This repository uses [Tegami](https://tegami.fuma-nama.dev) to version
 ## Normal release flow
 
 1. Add a pending changelog under `.tegami/` and merge it with the implementation.
-2. From a clean release branch based on `main`, run `bun run tegami version`.
+2. From a clean release branch based on `main`, run `bun run version:packages`.
 3. Review the version, generated `CHANGELOG.md`, and `.tegami/publish-lock.yaml`.
 4. Run `bun run release:check` and `bun run tegami publish --dry-run`.
 5. Commit the generated release changes, open a release PR, and merge it.
-6. Update a clean local `main`, authenticate npm and GitHub, and run `bun run tegami publish`.
+6. Update a clean local `main`, authenticate npm and GitHub, and run `bun run release`.
 7. Verify the npm version and dist-tag, GitHub tag and release, tarball contents, and a clean
    consumer install.
 
@@ -23,7 +23,7 @@ that can create releases in this repository:
 
 ```sh
 npm login
-GITHUB_TOKEN="$(gh auth token)" bun run tegami publish
+GITHUB_TOKEN="$(gh auth token)" bun run release
 ```
 
 Tegami publishes the npm package first. After the publish plan succeeds, it creates and pushes the
