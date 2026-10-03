@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Version and publish
+    name: Publish packages
     if: >
       github.repository == 'aryasaatvik/effect-platform-cloudflare' &&
       github.ref == 'refs/heads/main' &&
@@ -26,14 +26,13 @@ jobs:
        (github.event.pull_request.merged == true &&
         github.event.pull_request.base.ref == 'main' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
-        (github.event.pull_request.head.ref == 'tegami/version-packages' ||
-         contains(github.event.pull_request.labels.*.name, 'release'))))
+        github.event.pull_request.head.ref == 'tegami/version-packages'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: write
       id-token: write
-      pull-requests: write
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -66,9 +65,9 @@ jobs:
             }
           NODE
 
-      - name: Version and publish packages
+      - name: Publish packages
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != true
-        run: bun run tegami ci
+        run: bun run tegami publish
         env:
           GITHUB_TOKEN: ${{ github.token }}
 

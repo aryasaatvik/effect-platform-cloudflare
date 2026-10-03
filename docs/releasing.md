@@ -31,10 +31,9 @@ No GitHub Actions workflow runs these validation gates on PRs or pushes; authors
 
 3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Run the
    local gates against that version branch, then merge only the approved changes.
-4. A merged version PR from this repository targeting `main` triggers publication. A merged
-   same-repository PR with the `release` label does too. Tegami publishes the approved lock to npm,
-   then pushes the package tag and creates the GitHub Release. Private workspace examples are
-   excluded.
+4. Merging this repository's `tegami/version-packages` PR into `main` triggers publication.
+   The publish workflow runs `bun run tegami publish` against the approved lock, then pushes the
+   package tag and creates the GitHub Release. Private workspace examples are excluded.
 
 For an attended local version PR, start from clean, current `main` with GitHub authentication:
 
@@ -62,11 +61,13 @@ workflow permissions settings, so Tegami can create its version PR. The release 
 job permissions; the repository's default token permission can remain read-only.
 
 The publish job uses GitHub-hosted Ubuntu, Node 24 with npm >=11.5.1, and Bun 1.4.0. It needs
-`contents: write` for the version branch/tags/releases, `pull-requests: write` for version PRs, and
-`id-token: write` for npm OIDC authentication. It runs only after a merged version/release PR from this repository into `main`, or a
-manual dispatch from `main`. It checks out the triggering merged commit or dispatched main commit
-and does not persist checkout credentials. The GitHub token is provided only to the final Tegami command. Publication is
-serialized; a running publish job is not canceled by a newer push.
+`contents: write` for tags/releases, `pull-requests: read` for release-note metadata, and
+`id-token: write` for npm OIDC authentication. Version branch and PR creation belong only to the
+preparation job. Publication runs only after a merged `tegami/version-packages` PR from this
+repository into `main`, or a manual dispatch from `main`. It checks out the triggering merged or
+dispatched main commit and does not persist checkout credentials. The GitHub token is provided
+only to the final Tegami command. Publication is serialized; a running job is not canceled by a
+newer push.
 
 No `NPM_TOKEN` or `NODE_AUTH_TOKEN` secret is needed. The package's `prepack` script builds its
 actual publish artifacts; the hosted workflow does not repeat the full local gate. Tegami packs
