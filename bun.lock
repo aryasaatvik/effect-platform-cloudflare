@@ -39,7 +39,7 @@
     },
     "packages/effect-platform-cloudflare": {
       "name": "effect-platform-cloudflare",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "effect": "4.0.0",
       },
