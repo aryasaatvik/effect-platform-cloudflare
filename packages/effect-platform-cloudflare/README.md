@@ -4,7 +4,7 @@ Run an Effect HTTP router as a Cloudflare Worker without coupling the applicatio
 framework.
 
 ```sh
-bun add effect-platform-cloudflare effect@4.0.0
+bun add effect-platform-cloudflare effect
 ```
 
 The `0.2.x` line supports stable Effect `4.x`, starting with `4.0.0`. Effect prereleases and
