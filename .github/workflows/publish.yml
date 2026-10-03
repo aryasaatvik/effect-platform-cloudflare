@@ -1,0 +1,78 @@
+name: Publish
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate the publish lock without publishing.
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish packages
+    if: >
+      github.repository == 'aryasaatvik/effect-platform-cloudflare' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.merged == true &&
+        github.event.pull_request.base.ref == 'main' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.head.ref == 'tegami/version-packages'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check npm trusted publishing support
+        run: |
+          node --input-type=module <<'NODE'
+            import { execFileSync } from "node:child_process";
+            const version = execFileSync("npm", ["--version"], { encoding: "utf8" }).trim();
+            const [major, minor, patch] = version.split(".").map(Number);
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              throw new Error(`npm >=11.5.1 is required for trusted publishing, received ${version}`);
+            }
+          NODE
+
+      - name: Publish packages
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != true
+        run: bun run tegami publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Validate publish lock (dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        run: bun run tegami publish --dry-run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
