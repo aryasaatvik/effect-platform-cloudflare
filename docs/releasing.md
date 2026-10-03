@@ -1,47 +1,85 @@
 # Releasing
 
-This repository uses [Tegami](https://tegami.fuma-nama.dev) to version
-`effect-platform-cloudflare`, maintain its changelog, publish it to npm, and create GitHub releases.
+Tegami manages the changelog, version pull requests, npm publication, package Git tags, and GitHub
+Releases. GitHub Actions publishes from `main` using npm trusted publishing and automatic
+provenance. The package tag convention is `effect-platform-cloudflare@<version>`.
 
-## Normal release flow
+## Queue and review a release
 
-1. Add a pending changelog under `.tegami/` and merge it with the implementation.
-2. From a clean release branch based on `main`, run `bun run version:packages`.
-3. Review the version, generated `CHANGELOG.md`, and `.tegami/publish-lock.yaml`.
-4. Run `bun run release:check` and `bun run tegami publish --dry-run`.
-5. Commit the generated release changes, open a release PR, and merge it.
-6. Update a clean local `main`, authenticate npm and GitHub, and run `bun run release`.
-7. Verify the npm version and dist-tag, GitHub tag and release, tarball contents, and a clean
-   consumer install.
+1. Commit a pending changelog under `.tegami/` with the implementation. Follow `AGENTS.md` for its
+   format.
+2. After the change merges into `main`, `.github/workflows/publish.yml` runs the release checks and
+   `bun run tegami ci`. Pending changelogs produce or update the `tegami/version-packages` branch
+   and a version PR against `main`.
+3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Merge the
+   version PR only when its changes and checks are approved.
+4. The next `main` publish run publishes the approved lock to npm, then pushes the package tag and
+   creates the GitHub Release. Private workspace examples are excluded from publishing.
 
-Do not edit generated package changelogs or `.tegami/publish-lock.yaml` by hand.
+The ordinary CI workflow runs `release:check` on PRs with read-only permissions. It validates the
+publish lock with `tegami publish --dry-run` only when the lock exists. A version PR created with
+`GITHUB_TOKEN` may need a maintainer to approve its CI run; approve the run on the PR page before
+merging if GitHub requests it.
 
-## Local publishing
-
-Publishing requires an npm session that can publish `effect-platform-cloudflare` and a GitHub token
-that can create releases in this repository:
-
-```sh
-npm login
-GITHUB_TOKEN="$(gh auth token)" bun run release
-```
-
-Tegami publishes the npm package first. After the publish plan succeeds, it creates and pushes the
-package tag and creates the corresponding GitHub release. A failed npm publish does not produce a
-tag or release.
-
-For `v0.1.0`, make the repository public before publishing and confirm the unscoped npm package name
-is still available.
-
-## Verification
-
-Run before merging generated release changes:
+For an attended local version PR, start from clean, current `main` with GitHub authentication:
 
 ```sh
 bun install --frozen-lockfile
-bun run release:check
-bun run tegami publish --dry-run
+GH_TOKEN="$(gh auth token)" bun run version:packages
 ```
 
-The Tegami publish dry-run requires the generated publish lock and therefore applies to release
-branches, not ordinary implementation PRs.
+This command creates or updates the version PR; it does not publish npm packages. Do not edit
+generated package changelogs or `.tegami/publish-lock.yaml` by hand.
+
+## One-time trusted publisher setup
+
+Configure the npm package `effect-platform-cloudflare` with this GitHub Actions trusted publisher:
+
+| Field                | Value                        |
+| -------------------- | ---------------------------- |
+| Organization or user | `aryasaatvik`                |
+| Repository           | `effect-platform-cloudflare` |
+| Workflow filename    | `publish.yml`                |
+| Environment          | Leave blank                  |
+| Publishing method    | `npm publish`                |
+
+Enable **Allow GitHub Actions to create and approve pull requests** in the repository's Actions
+workflow permissions settings, so Tegami can create its version PR. The workflows specify their own
+job permissions; the repository's default token permission can remain read-only.
+
+The publish job uses GitHub-hosted Ubuntu, Node 24 with npm >=11.5.1, and Bun 1.4.0. It needs
+`contents: write` for the version branch/tags/releases, `pull-requests: write` for version PRs, and
+`id-token: write` for npm OIDC authentication. It runs only on this repository's `main` push or
+manual dispatch from `main`, checks out the triggering commit, and does not persist checkout
+credentials. The GitHub token is provided only to the final Tegami command. Publication is
+serialized; a running publish job is not canceled by a newer push.
+
+No `NPM_TOKEN` or `NODE_AUTH_TOKEN` secret is needed. Tegami packs with Bun and publishes with npm;
+npm exchanges the workflow identity for short-lived publish credentials and generates provenance
+for this public package/repository. A local `npm whoami` result does not verify this workflow's
+trusted publisher. See [npm's trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
+
+## Verify or recover a release
+
+Check npm, the tag, and the GitHub Release separately:
+
+```sh
+npm view effect-platform-cloudflare version dist-tags dist --json
+gh release view "effect-platform-cloudflare@$(bun -e 'console.log(require("./packages/effect-platform-cloudflare/package.json").version)')"
+bun run tegami check-publish
+```
+
+Verify the registry tarball contents/integrity and install it into a clean consumer before updating
+applications. A successful workflow is not a substitute for registry and consumer verification.
+
+For an approved lock already on `main`, or after correcting a publisher/setup failure, dispatch the
+workflow from `main`:
+
+```sh
+gh workflow run publish.yml --ref main
+```
+
+Inspect npm, the Git tag, the GitHub Release, and Tegami's publish status before rerunning a
+partially completed release. Tegami skips already completed tasks; do not bump or re-tag solely to
+retry a failed publish. Manual dispatches against other refs are skipped. Workflow identity,
+permission exchange, PR creation, and publication must be verified on GitHub-hosted runners.
