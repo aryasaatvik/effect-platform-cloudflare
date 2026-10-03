@@ -1,5 +1,5 @@
 import { Context, Effect } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerResponse } from "effect/http";
 import { HttpWorker } from "effect-platform-cloudflare";
 
 interface Env {

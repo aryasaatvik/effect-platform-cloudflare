@@ -1,0 +1,14 @@
+core:changelogs:
+  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: minor\n---\n\n### Support stable Effect V4\n\nUse Effect's stable HTTP modules and require Effect `^4.0.0`. Upgrade applications from Effect prereleases to stable V4 before using this release.\n\nThe public `HttpWorker.toWebHandler` API and Worker lifecycle behavior remain unchanged: isolated request scopes, shared isolate initialization, abort interruption, streaming ownership, and complete handler pinning through `waitUntil`.\n"
+    filename: 2026-10-03-stable-effect-v4.md
+    v: 0.0.0
+core:packages:
+  - changelogIds:
+      - 2026-10-03-stable-effect-v4.md
+    id: npm:effect-platform-cloudflare
+    updated: true
+npm:packages:
+  - id: npm:effect-platform-cloudflare
+  - id: npm:@effect-platform-cloudflare/example-http-api
+  - id: npm:@effect-platform-cloudflare/example-lifecycle-api
+  - id: npm:@effect-platform-cloudflare/example-lifecycle-caller

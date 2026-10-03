@@ -1,6 +1,6 @@
 {
   "name": "effect-platform-cloudflare",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Effect HTTP router runtime for Cloudflare Workers",
   "keywords": [
     "cloudflare-workers",
@@ -42,9 +42,9 @@
     "prepack": "bun run build"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0"
   },
   "peerDependencies": {
-    "effect": ">=4.0.0-beta.98"
+    "effect": "^4.0.0"
   }
 }

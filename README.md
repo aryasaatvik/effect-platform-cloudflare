@@ -4,7 +4,7 @@ Run an Effect HTTP router as a Cloudflare Worker without coupling the applicatio
 framework.
 
 ```sh
-bun add effect-platform-cloudflare effect@4.0.0-beta.98
+bun add effect-platform-cloudflare effect
 ```
 
 This repository is intentionally deployment-framework independent. The package turns an Effect

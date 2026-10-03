@@ -8,7 +8,7 @@ import {
   HttpServerError,
   HttpServerRequest,
   HttpServerResponse,
-} from "effect/unstable/http";
+} from "effect/http";
 
 import {
   fromNativeExecutionContext,

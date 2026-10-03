@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Stream } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { HttpWorker, WorkerExecutionContext } from "effect-platform-cloudflare";
 
 interface Env {

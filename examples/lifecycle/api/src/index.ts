@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { Context, Effect, Layer, Schedule, Stream } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { HttpWorker, WorkerExecutionContext } from "effect-platform-cloudflare";
 
 interface Env {

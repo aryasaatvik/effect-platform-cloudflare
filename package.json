@@ -28,7 +28,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.2",
     "@cloudflare/workers-types": "^4.20260702.1",
-    "effect": "4.0.0-beta.98",
+    "effect": "4.0.0",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
     "tegami": "1.2.6",
