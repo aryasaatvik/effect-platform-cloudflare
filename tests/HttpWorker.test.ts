@@ -1,5 +1,5 @@
 import { Context, Deferred, Effect, Layer, Stream } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -4,15 +4,15 @@ Run an Effect HTTP router as a Cloudflare Worker without coupling the applicatio
 framework.
 
 ```sh
-bun add effect-platform-cloudflare effect@4.0.0-beta.98
+bun add effect-platform-cloudflare effect@4.0.0
 ```
 
-The `0.1.x` line is tested against Effect `4.0.0-beta.98`, which is the minimum supported peer
-version. Later Effect releases are accepted by the package peer range.
+The `0.2.x` line supports stable Effect `4.x`, starting with `4.0.0`. Effect prereleases and
+other major versions are outside the supported peer range.
 
 ```ts
 import { Context, Effect } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerResponse } from "effect/http";
 import { HttpWorker } from "effect-platform-cloudflare";
 
 interface Env {
