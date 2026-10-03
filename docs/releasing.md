@@ -4,32 +4,46 @@ Tegami manages the changelog, version pull requests, npm publication, package Gi
 Releases. GitHub Actions publishes from `main` using npm trusted publishing and automatic
 provenance. The package tag convention is `effect-platform-cloudflare@<version>`.
 
-## Queue and review a release
+## Validate and prepare a release
+
+Correctness gates run locally before merging implementation or version changes:
+
+```sh
+bun install --frozen-lockfile
+bun run release:check
+```
+
+When a publish lock exists, also run `bun run tegami publish --dry-run`. This covers formatting,
+lint, types, Node/workerd lifecycle tests, build/package checks, and the pending publication plan.
+No GitHub Actions workflow runs these validation gates on PRs or pushes; authors own the checks.
 
 1. Commit a pending changelog under `.tegami/` with the implementation. Follow `AGENTS.md` for its
    format.
-2. After the change merges into `main`, `.github/workflows/publish.yml` runs the release checks and
-   `bun run tegami ci`. Pending changelogs produce or update the `tegami/version-packages` branch
-   and a version PR against `main`.
-3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Merge the
-   version PR only when its changes and checks are approved.
-4. The next `main` publish run publishes the approved lock to npm, then pushes the package tag and
-   creates the GitHub Release. Private workspace examples are excluded from publishing.
+2. After the implementation merges into `main`, dispatch the manual preparation workflow:
 
-The ordinary CI workflow runs `release:check` on PRs with read-only permissions. It validates the
-publish lock with `tegami publish --dry-run` only when the lock exists. A version PR created with
-`GITHUB_TOKEN` may need a maintainer to approve its CI run; approve the run on the PR page before
-merging if GitHub requests it.
+   ```sh
+   gh workflow run prepare-release.yml --ref main
+   ```
+
+   Tegami consumes the pending notes, updates versions/changelogs/publish lock, pushes
+   `tegami/version-packages`, and creates or updates its version PR against `main`. Preparation
+   has GitHub contents/PR write permissions and no npm OIDC permission.
+
+3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Run the
+   local gates against that version branch, then merge only the approved changes.
+4. A merged version PR from this repository targeting `main` triggers publication. A merged
+   same-repository PR with the `release` label does too. Tegami publishes the approved lock to npm,
+   then pushes the package tag and creates the GitHub Release. Private workspace examples are
+   excluded.
 
 For an attended local version PR, start from clean, current `main` with GitHub authentication:
 
 ```sh
-bun install --frozen-lockfile
 GH_TOKEN="$(gh auth token)" bun run version:packages
 ```
 
-This command creates or updates the version PR; it does not publish npm packages. Do not edit
-generated package changelogs or `.tegami/publish-lock.yaml` by hand.
+Preparation creates a version PR without publishing. Do not edit generated package changelogs or
+`.tegami/publish-lock.yaml` by hand.
 
 ## One-time trusted publisher setup
 
@@ -44,17 +58,19 @@ Configure the npm package `effect-platform-cloudflare` with this GitHub Actions 
 | Publishing method    | `npm publish`                |
 
 Enable **Allow GitHub Actions to create and approve pull requests** in the repository's Actions
-workflow permissions settings, so Tegami can create its version PR. The workflows specify their own
+workflow permissions settings, so Tegami can create its version PR. The release workflows specify their own
 job permissions; the repository's default token permission can remain read-only.
 
 The publish job uses GitHub-hosted Ubuntu, Node 24 with npm >=11.5.1, and Bun 1.4.0. It needs
 `contents: write` for the version branch/tags/releases, `pull-requests: write` for version PRs, and
-`id-token: write` for npm OIDC authentication. It runs only on this repository's `main` push or
-manual dispatch from `main`, checks out the triggering commit, and does not persist checkout
-credentials. The GitHub token is provided only to the final Tegami command. Publication is
+`id-token: write` for npm OIDC authentication. It runs only after a merged version/release PR from this repository into `main`, or a
+manual dispatch from `main`. It checks out the triggering merged commit or dispatched main commit
+and does not persist checkout credentials. The GitHub token is provided only to the final Tegami command. Publication is
 serialized; a running publish job is not canceled by a newer push.
 
-No `NPM_TOKEN` or `NODE_AUTH_TOKEN` secret is needed. Tegami packs with Bun and publishes with npm;
+No `NPM_TOKEN` or `NODE_AUTH_TOKEN` secret is needed. The package's `prepack` script builds its
+actual publish artifacts; the hosted workflow does not repeat the full local gate. Tegami packs
+with Bun and publishes with npm;
 npm exchanges the workflow identity for short-lived publish credentials and generates provenance
 for this public package/repository. A local `npm whoami` result does not verify this workflow's
 trusted publisher. See [npm's trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
@@ -77,6 +93,12 @@ workflow from `main`:
 
 ```sh
 gh workflow run publish.yml --ref main
+```
+
+A manual preflight can validate the existing lock without publishing:
+
+```sh
+gh workflow run publish.yml --ref main -f dry_run=true
 ```
 
 Inspect npm, the Git tag, the GitHub Release, and Tegami's publish status before rerunning a

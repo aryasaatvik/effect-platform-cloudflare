@@ -1,23 +1,23 @@
-name: CI
+name: Prepare release
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions: {}
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: prepare-release
+  cancel-in-progress: false
 
 jobs:
-  check:
-    name: Release checks
+  version:
+    name: Draft versions
+    if: github.repository == 'aryasaatvik/effect-platform-cloudflare' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -39,11 +39,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Validate release artifacts
-        run: bun run release:check
-
-      - name: Validate pending publish lock
-        run: |
-          if test -f .tegami/publish-lock.yaml; then
-            bun run tegami publish --dry-run
-          fi
+      - name: Draft version changes
+        run: bun run tegami version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

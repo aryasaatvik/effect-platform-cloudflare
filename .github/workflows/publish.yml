@@ -1,9 +1,14 @@
 name: Publish
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [closed]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate the publish lock without publishing.
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -14,7 +19,15 @@ concurrency:
 jobs:
   publish:
     name: Version and publish
-    if: github.repository == 'aryasaatvik/effect-platform-cloudflare' && github.ref == 'refs/heads/main'
+    if: >
+      github.repository == 'aryasaatvik/effect-platform-cloudflare' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.merged == true &&
+        github.event.pull_request.base.ref == 'main' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.pull_request.head.ref == 'tegami/version-packages' ||
+         contains(github.event.pull_request.labels.*.name, 'release'))))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -42,15 +55,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Validate release artifacts
-        run: bun run release:check
-
-      - name: Validate pending publish lock
-        run: |
-          if test -f .tegami/publish-lock.yaml; then
-            bun run tegami publish --dry-run
-          fi
-
       - name: Check npm trusted publishing support
         run: |
           node --input-type=module <<'NODE'
@@ -63,6 +67,13 @@ jobs:
           NODE
 
       - name: Version and publish packages
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != true
         run: bun run tegami ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Validate publish lock (dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        run: bun run tegami publish --dry-run
         env:
           GITHUB_TOKEN: ${{ github.token }}

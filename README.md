@@ -40,9 +40,9 @@ bun run build
 ## Releasing
 
 Releases use [Tegami](https://tegami.fuma-nama.dev), GitHub Actions, and npm trusted publishing.
-Commit a pending changelog under `.tegami/` with the implementation. The `publish.yml` workflow
-opens a version PR against `main`; merging that PR publishes the approved version with npm
-provenance and creates its GitHub release. See [docs/releasing.md](docs/releasing.md) for setup,
+Run validation locally and commit a pending changelog under `.tegami/` with the implementation.
+Manually run `prepare-release.yml` to open a version PR against `main`; merging that PR publishes
+the approved version with npm provenance and creates its GitHub release. See [docs/releasing.md](docs/releasing.md) for setup,
 review, and verification.
 
 ## License
