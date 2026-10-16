@@ -15,11 +15,12 @@ bun run release:check
 
 `release:check` runs formatting, lint, source and automation types, offline lifecycle tests,
 the offline publication-gate proof, real workerd tests, and the built/packed/installed consumer.
-Ordinary PRs and generated version PRs run this same full gate in CI. `release:version` prepares
-release metadata and its PR; `release:publish` publishes the approved lock. Neither command is a
-validation shortcut. The Tegami `afterPreflight` hook runs `release:check` before a pending package
-can publish, including direct `tegami publish` invocations. A failed gate prevents publication,
-tags, and GitHub Releases. The gate proof substitutes publication locally and makes no registry writes.
+Ordinary PRs run this full gate in CI; generated version PRs require maintainer approval to run
+the same full checks, as described below. `release:version` prepares release metadata and its PR;
+`release:publish` publishes the approved lock. Neither command is a validation shortcut. The Tegami
+`afterPreflight` hook independently runs `release:check` against the exact publication checkout
+before a pending package can publish, including direct `tegami publish` invocations. A failed gate
+prevents publication, tags, and GitHub Releases. The gate proof substitutes publication locally and makes no registry writes.
 
 1. Commit a pending changelog under `.tegami/` with the implementation. Follow `AGENTS.md` for its
    format.
@@ -34,7 +35,12 @@ tags, and GitHub Releases. The gate proof substitutes publication locally and ma
    has GitHub contents/PR write permissions and no npm OIDC permission.
 
 3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Run the
-   local gates against that version branch, then merge only the approved changes.
+   local gates against that version branch. The preparation workflow uses `GITHUB_TOKEN`, so its
+   PR `opened`, `synchronize`, and `reopened` events create workflow runs that require approval.
+   A maintainer with repository write access must select **Approve workflows to run** in the PR
+   merge-box banner, then verify the full CI checks succeed for the version PR head before merging
+   the approved changes. No checks are skipped. See
+   [GitHub’s token-trigger documentation](https://docs.github.com/en/actions/concepts/security/github_token).
 4. Merging this repository's `tegami/version-packages` PR into `main` triggers publication.
    The publish workflow runs `bun run release:publish` against the approved lock, validates before
    publication, then pushes the

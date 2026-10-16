@@ -42,7 +42,9 @@ tests, and the offline publish-gate proof. `build` emits supported JavaScript an
 `dist`. `test:artifact` builds, packs, installs into a temporary consumer, and checks published
 exports, declarations, and runtime behavior. It may read the package registry to install Effect.
 `test:workers` runs the separate real workerd suite. `release:check` runs all these gates sequentially.
-Both ordinary and generated version PRs run the full release check in CI. Use the Bun version in
+Ordinary PRs run the full release check in CI. Generated version PRs require a maintainer to
+approve the workflows and verify the same full checks succeed before merging; see the
+[release instructions](docs/releasing.md#validate-and-prepare-a-release). Use the Bun version in
 `packageManager`; GitHub Actions reads that same pin.
 
 ## Releasing
