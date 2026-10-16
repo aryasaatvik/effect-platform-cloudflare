@@ -13,9 +13,13 @@ bun install --frozen-lockfile
 bun run release:check
 ```
 
-When a publish lock exists, also run `bun run tegami publish --dry-run`. This covers formatting,
-lint, types, Node/workerd lifecycle tests, build/package checks, and the pending publication plan.
-No GitHub Actions workflow runs these validation gates on PRs or pushes; authors own the checks.
+`release:check` runs formatting, lint, source and automation types, offline lifecycle tests,
+the offline publication-gate proof, real workerd tests, and the built/packed/installed consumer.
+Ordinary PRs and generated version PRs run this same full gate in CI. `release:version` prepares
+release metadata and its PR; `release:publish` publishes the approved lock. Neither command is a
+validation shortcut. The Tegami `afterPreflight` hook runs `release:check` before a pending package
+can publish, including direct `tegami publish` invocations. A failed gate prevents publication,
+tags, and GitHub Releases. The gate proof substitutes publication locally and makes no registry writes.
 
 1. Commit a pending changelog under `.tegami/` with the implementation. Follow `AGENTS.md` for its
    format.
@@ -32,13 +36,14 @@ No GitHub Actions workflow runs these validation gates on PRs or pushes; authors
 3. Review the generated package version, `CHANGELOG.md`, and `.tegami/publish-lock.yaml`. Run the
    local gates against that version branch, then merge only the approved changes.
 4. Merging this repository's `tegami/version-packages` PR into `main` triggers publication.
-   The publish workflow runs `bun run tegami publish` against the approved lock, then pushes the
+   The publish workflow runs `bun run release:publish` against the approved lock, validates before
+   publication, then pushes the
    package tag and creates the GitHub Release. Private workspace examples are excluded.
 
 For an attended local version PR, start from clean, current `main` with GitHub authentication:
 
 ```sh
-GH_TOKEN="$(gh auth token)" bun run version:packages
+GH_TOKEN="$(gh auth token)" bun run release:version
 ```
 
 Preparation creates a version PR without publishing. Do not edit generated package changelogs or
@@ -60,7 +65,7 @@ Enable **Allow GitHub Actions to create and approve pull requests** in the repos
 workflow permissions settings, so Tegami can create its version PR. The release workflows specify their own
 job permissions; the repository's default token permission can remain read-only.
 
-The publish job uses GitHub-hosted Ubuntu, Node 24 with npm >=11.5.1, and Bun 1.4.0. It needs
+The publish job uses GitHub-hosted Ubuntu, Node 24 with npm >=11.5.1, and Bun from the root `packageManager` pin. It needs
 `contents: write` for tags/releases, `pull-requests: read` for release-note metadata, and
 `id-token: write` for npm OIDC authentication. Version branch and PR creation belong only to the
 preparation job. Publication runs only after a merged `tegami/version-packages` PR from this
@@ -70,7 +75,7 @@ only to the final Tegami command. Publication is serialized; a running job is no
 newer push.
 
 No `NPM_TOKEN` or `NODE_AUTH_TOKEN` secret is needed. The package's `prepack` script builds its
-actual publish artifacts; the hosted workflow does not repeat the full local gate. Tegami packs
+actual publish artifacts; the hosted publication path also enforces the full release gate. Tegami packs
 with Bun and publishes with npm;
 npm exchanges the workflow identity for short-lived publish credentials and generates provenance
 for this public package/repository. A local `npm whoami` result does not verify this workflow's

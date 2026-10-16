@@ -15,7 +15,13 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2024",
-    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers/types"]
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers/types", "bun"]
   },
-  "include": ["packages/**/*.ts", "examples/**/*.ts", "tests/**/*.ts", "*.config.ts"]
+  "include": [
+    "packages/**/*.ts",
+    "examples/**/*.ts",
+    "tests/**/*.ts",
+    "*.config.ts",
+    "scripts/**/*.mts"
+  ]
 }
