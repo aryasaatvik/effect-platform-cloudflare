@@ -3,6 +3,8 @@ import { tegami } from "tegami";
 import { runCli } from "tegami/cli";
 import { github } from "tegami/plugins/github";
 
+import { releaseChecks } from "./release-checks.mts";
+
 const paper = tegami({
   ignore: ["effect-platform-cloudflare-monorepo", /^@effect-platform-cloudflare\/example-/],
   npm: {
@@ -13,6 +15,7 @@ const paper = tegami({
     },
   },
   plugins: [
+    releaseChecks(),
     github({
       repo: "aryasaatvik/effect-platform-cloudflare",
       pushTags: true,
