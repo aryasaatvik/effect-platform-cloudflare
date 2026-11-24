@@ -65,6 +65,23 @@ built them; the application layer, its routes, and middleware always see the cur
 bindings. A failed build is closed and retried on the next request. The isolate context deliberately omits Effect's `CurrentMemoMap`, so request-time layer
 builds receive a fresh memo map.
 
+## Declared HttpApi
+
+`HttpApiBuilder.layer` asks the host for `HttpPlatform`, `Etag.Generator`, `Path`, and
+`FileSystem`. `WorkerHttpPlatform.layer` provides them for workerd: file-backed responses are
+defects, the filesystem is a no-op, and no compression is advertised, since Cloudflare compresses at
+the edge.
+
+```ts
+const fetch = HttpWorker.toWebHandler(
+  HttpApiBuilder.layer(Api).pipe(
+    Layer.provide(GroupsLive),
+    Layer.provide(WorkerHttpPlatform.layer),
+  ),
+  { environment: WorkerBindings },
+);
+```
+
 ## HTTP behavior
 
 The handler uses Effect's HTTP server machinery for failure rendering, tracing, response logging,
