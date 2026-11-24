@@ -85,7 +85,7 @@ describe("HttpWorker.toWebHandler", () => {
     ]);
 
     expect(await first.text()).toBe("ready:ready");
-    expect(await second.text()).toBe("ready:ready");
+    expect(await second.text()).toBe("ready:ignored");
     expect(counts).toEqual({ isolateBuilds: 1, requestAcquires: 2, requestReleases: 2 });
     expect((await firstContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
     expect((await secondContext.settle()).every(({ status }) => status === "fulfilled")).toBe(true);
@@ -96,7 +96,7 @@ describe("HttpWorker.toWebHandler", () => {
       { VALUE: "ignored" },
       warmContext,
     );
-    expect(await warm.text()).toBe("ready:ready");
+    expect(await warm.text()).toBe("ready:ignored");
     expect(warmContext.promises).toHaveLength(1);
   });
 

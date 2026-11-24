@@ -190,9 +190,9 @@ const runRequest = <A, E, R>(
 /**
  * Builds a Cloudflare Worker fetch handler from an Effect HTTP router layer.
  *
- * The isolate layer is initialized once. The router layer is built in a fresh
- * scope for every request so request-owned resources never cross workerd event
- * contexts. Responses, aborts, logging, and streaming follow Effect's HTTP
+ * The isolate layer is initialized once, from the first request's bindings. The
+ * router layer is built in a fresh scope for every request, with that request's
+ * bindings, so request-owned resources never cross workerd event contexts. Responses, aborts, logging, and streaming follow Effect's HTTP
  * server semantics.
  */
 const makeWebHandler = <
@@ -216,7 +216,7 @@ const makeWebHandler = <
   >,
 ): Handler<Env> => {
   type IsolateContext = Context.Context<
-    Exclude<IsolateProvided | Environment, Layer.CurrentMemoMap>
+    Exclude<IsolateProvided, Environment | Layer.CurrentMemoMap>
   >;
   let built: Promise<IsolateContext> | undefined;
   let isolateReady = false;
@@ -231,7 +231,9 @@ const makeWebHandler = <
       let attempt: Promise<IsolateContext>;
       attempt = Effect.runPromiseExit(
         Layer.buildWithMemoMap(isolateLayer, isolateMemoMap, isolateScope).pipe(
-          Effect.map(Context.omit(Layer.CurrentMemoMap)),
+          // The isolate's services keep the bindings they were built with, but
+          // the request's own bindings stay in charge of the request graph.
+          Effect.map(Context.omit(Layer.CurrentMemoMap, options.environment)),
         ),
       ).then(async (exit) => {
         if (Exit.isSuccess(exit)) {

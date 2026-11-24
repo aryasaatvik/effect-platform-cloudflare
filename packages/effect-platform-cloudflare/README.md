@@ -60,8 +60,9 @@ const fetch = HttpWorker.toWebHandler(AppLayer, {
 });
 ```
 
-Successful isolate initialization is cached. A failed build is closed and retried on the next
-request. The isolate context deliberately omits Effect's `CurrentMemoMap`, so request-time layer
+Successful isolate initialization is cached. Isolate services see the bindings of the request that
+built them; the application layer, its routes, and middleware always see the current request's
+bindings. A failed build is closed and retried on the next request. The isolate context deliberately omits Effect's `CurrentMemoMap`, so request-time layer
 builds receive a fresh memo map.
 
 ## HTTP behavior
