@@ -1,10 +1,10 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: minor\n---\n\n### Support stable Effect V4\n\nUse Effect's stable HTTP modules and require Effect `^4.0.0`. Upgrade applications from Effect prereleases to stable V4 before using this release.\n\nThe public `HttpWorker.toWebHandler` API and Worker lifecycle behavior remain unchanged: isolated request scopes, shared isolate initialization, abort interruption, streaming ownership, and complete handler pinning through `waitUntil`.\n"
-    filename: 2026-10-03-stable-effect-v4.md
+  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: patch\n---\n\n### Routes see the current request's bindings\n\n`HttpWorker.toWebHandler` built the isolate context with the first request's bindings, and that\ncopy shadowed the bindings of every later request inside the router graph, while middleware already\nsaw the current ones. The application layer, routes, and middleware now all see the bindings passed\nto the current call. Services built by `isolateLayer` still keep the bindings of the request that\nbuilt them.\n"
+    filename: 2026-11-24-274c92ba.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-10-03-stable-effect-v4.md
+      - 2026-11-24-274c92ba.md
     id: npm:effect-platform-cloudflare
     updated: true
 npm:packages:
