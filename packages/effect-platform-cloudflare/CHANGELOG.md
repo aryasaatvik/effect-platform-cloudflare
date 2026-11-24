@@ -1,3 +1,12 @@
+## effect-platform-cloudflare@0.2.2
+
+### Serve a declared HttpApi on workerd
+
+`WorkerHttpPlatform.layer` provides the host services `HttpApiBuilder.layer` asks for
+(`HttpPlatform`, `Etag.Generator`, `Path`, and a no-op `FileSystem`), so a Worker serves a declared
+`HttpApi` through `HttpWorker.toWebHandler` without assembling them itself. File-backed responses
+are defects, since workerd has no filesystem.
+
 ## effect-platform-cloudflare@0.2.1
 
 ### Routes see the current request's bindings

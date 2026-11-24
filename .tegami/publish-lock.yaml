@@ -1,10 +1,10 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: patch\n---\n\n### Routes see the current request's bindings\n\n`HttpWorker.toWebHandler` built the isolate context with the first request's bindings, and that\ncopy shadowed the bindings of every later request inside the router graph, while middleware already\nsaw the current ones. The application layer, routes, and middleware now all see the bindings passed\nto the current call. Services built by `isolateLayer` still keep the bindings of the request that\nbuilt them.\n"
-    filename: 2026-11-24-274c92ba.md
+  - content: "---\npackages:\n  npm:effect-platform-cloudflare:\n    type: patch\n---\n\n### Serve a declared HttpApi on workerd\n\n`WorkerHttpPlatform.layer` provides the host services `HttpApiBuilder.layer` asks for\n(`HttpPlatform`, `Etag.Generator`, `Path`, and a no-op `FileSystem`), so a Worker serves a declared\n`HttpApi` through `HttpWorker.toWebHandler` without assembling them itself. File-backed responses\nare defects, since workerd has no filesystem.\n"
+    filename: 2026-11-24-4eb9fc94.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-11-24-274c92ba.md
+      - 2026-11-24-4eb9fc94.md
     id: npm:effect-platform-cloudflare
     updated: true
 npm:packages:
