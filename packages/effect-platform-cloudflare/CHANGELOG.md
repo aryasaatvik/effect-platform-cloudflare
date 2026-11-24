@@ -1,3 +1,13 @@
+## effect-platform-cloudflare@0.2.1
+
+### Routes see the current request's bindings
+
+`HttpWorker.toWebHandler` built the isolate context with the first request's bindings, and that
+copy shadowed the bindings of every later request inside the router graph, while middleware already
+saw the current ones. The application layer, routes, and middleware now all see the bindings passed
+to the current call. Services built by `isolateLayer` still keep the bindings of the request that
+built them.
+
 ## effect-platform-cloudflare@0.2.0
 
 ### Support stable Effect V4
